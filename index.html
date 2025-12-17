@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriNCD QUEST 2025</title>
+    <style>
+        :root { --primary: #0066cc; --bg: #f4f7f6; --text: #333; --correct: #d4edda; --wrong: #f8d7da; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; }
+        
+        .container { max-width: 600px; margin: 0 auto; background: white; min-height: 100vh; box-shadow: 0 0 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+        .content-padding { padding: 25px; }
+
+        .header-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 5px; }
+        .flank-img { width: 50px; height: auto; object-fit: contain; }
+        .title-text { font-size: 1.8rem; font-weight: 800; margin: 0; text-align: center; line-height: 1.2; }
+        .txt-nutri { color: #28a745; } .txt-ncd { color: #dc3545; } .txt-quest { color: #007bff; } 
+        .round-badge { background: #0066cc; color: white; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; font-weight: bold; display: inline-block; margin: 10px auto; }
+        .dept-logo-container { text-align: center; margin: 10px 0 20px 0; }
+        .dept-logo { width: 140px; height: auto; }
+        .sub-title { text-align: center; color: #666; font-size: 0.85rem; margin-bottom: 20px; font-weight: 600; }
+
+        /* INPUTS & BUTTONS */
+        .btn { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn:disabled { background: #ccc; }
+        .btn-print { background: #333; margin-bottom: 20px; }
+
+        /* TIMER & PROGRESS */
+        .timer-sticky { position: sticky; top: 0; background: #fff; padding: 15px; border-bottom: 3px solid var(--primary); z-index: 1000; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .timer-text { font-weight: bold; color: #d9534f; font-size: 1.4rem; }
+
+        /* QUESTIONS */
+        .question-card { margin-bottom: 25px; padding-bottom: 15px; }
+        .question-text { font-weight: 600; font-size: 1.2rem; margin-bottom: 20px; line-height: 1.4; color: #222; }
+        .options label { display: flex; align-items: center; padding: 15px; margin-bottom: 10px; background: #f8f9fa; border: 1px solid #eee; border-radius: 8px; cursor: pointer; transition: background 0.2s; }
+        .options label:hover { background: #eef5fa; border-color: #cce5ff; }
+        .options input { width: 20px; height: 20px; margin: 0 15px 0 0; flex-shrink: 0; }
+
+        .hidden { display: none; }
+        
+        /* RESULTS */
+        .result-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px; font-size: 0.95rem; }
+        .res-correct { background-color: var(--correct); border-color: #c3e6cb; }
+        .res-wrong { background-color: var(--wrong); border-color: #f5c6cb; }
+        .res-explanation { font-size: 0.9rem; margin-top: 10px; color: #555; background: rgba(255,255,255,0.5); padding: 10px; border-radius: 5px; font-style: italic; }
+        .score-display { font-size: 2rem; font-weight: 800; color: var(--primary); margin-bottom: 20px; }
+
+        @media print { .btn, .timer-sticky, #screen-welcome, #passkey-form { display: none !important; } .container { box-shadow: none; max-width: 100%; } }
+    </style>
+</head>
+<body>
+
+<div class="container" id="screen-welcome">
+    <div class="content-padding">
+        <div class="header-row">
+            <img src="Nutrition.png" alt="Nutri" class="flank-img">
+            <h1 class="title-text">
+                <span class="txt-nutri">Nutri</span><span class="txt-ncd">NCD</span> <span class="txt-quest">QUEST</span>
+            </h1>
+            <img src="NCDs.png" alt="NCD" class="flank-img">
+        </div>
+
+        <div style="text-align: center;">
+            <div class="round-badge">PRELIMINARY ROUND</div>
+        </div>
+
+        <div class="sub-title">30th AP State Joint IAPSM & IPHA Conference<br>Andhra Medical College, Visakhapatnam.</div>
+        <div class="dept-logo-container"><img src="SPM_AMC_LOGO.png" alt="Department Logo" class="dept-logo"></div>
+        
+        <div style="background: #eef5fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem;">
+            <strong>Instructions:</strong>
+            <ul style="padding-left: 20px; margin: 5px 0;">
+                <li>20 Questions | No Negative Marks</li>
+                <li>Anonymous Mode: No personal data required.</li>
+                <li>Get your score along with the key once you submit.</li>
+            </ul>
+        </div>
+
+        <button class="btn" onclick="startQuiz()">Start Quiz</button>
+    </div>
+</div>
+
+<div class="container hidden" id="screen-quiz">
+    <div class="timer-sticky">
+        <span class="progress-text" id="progress-indicator">Q1 of 20</span>
+        <span class="timer-text" id="timer">10:00</span>
+    </div>
+    <div class="content-padding">
+        <div id="single-question-container"></div>
+        <button class="btn" id="nextBtn" onclick="handleNextButton()">Next Question</button>
+    </div>
+</div>
+
+<div class="container hidden" id="screen-result">
+    <div class="content-padding">
+        <div style="text-align: center;">
+            <div class="header-row"><img src="SPM_AMC_LOGO.png" alt="Logo" style="height: 60px;"></div>
+            <h2>Quiz Results</h2>
+            <div id="final-score" class="score-display"></div>
+            <button class="btn btn-print" onclick="trackAndPrint()">Download / Print Score Card</button>
+        </div>
+        <div id="result-breakdown"></div>
+    </div>
+</div>
+
+<script>
+    // --- CONFIGURATION ---
+    // PASTE YOUR NEW GOOGLE SCRIPT URL HERE
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyRt2mnQyh4ELlkeUP6i_4NaTkOMYcuPVZpryv2JEfYKngAC7pHtPc3qaae0h6zlHP-vw/exec"; 
+    const TIME_LIMIT_SECONDS = 600;
+
+    // --- USER LOCATION DATA ---
+    let userIP = "Unknown";
+    let userLocation = "Unknown";
+
+    // Auto-fetch location on load
+    fetch('https://ipapi.co/json/')
+        .then(res => res.json())
+        .then(data => {
+            userIP = data.ip || "Unknown";
+            userLocation = `${data.city}, ${data.region}, ${data.country_name}`;
+            console.log("Loc:", userLocation);
+        })
+        .catch(err => console.log("IP fetch failed, using default."));
+
+    // --- QUESTION DB (20 Questions with Explanations) ---
+    // Added 'note' field for explanations based on the Answer Key
+    const db = [
+        { 
+            q: "According to ICMR-NIN Dietary Guidelines for Indians 2024, which age bracket defines the 'Reference Indian Adult'?", 
+            opts: ["19-39 years", "18-29 years", "25-45 years", "20-49 years"], 
+            ans: "19-39 years",
+            note: "Reference: ICMR-NIN 2024 definition of Reference Adult. This defines the age of peak physiological maturity before age-related decline begins."
+        },
+        { 
+            q: "The WHO 2023 guideline on Non-Sugar Sweeteners (NSS) recommends against their use for weight control. Which is an NSS?", 
+            opts: ["Medicinal syrups", "Stevia and its derivatives", "Sugar alcohols (Polyols)", "Low-calorie sugars"], 
+            ans: "Stevia and its derivatives",
+            note: "Reference: WHO NSS Guideline. It specifically lists Stevia, Aspartame, and Sucralose, while excluding sugar alcohols (polyols)."
+        },
+        { 
+            q: "Which NOVA food classification category is most strongly associated with obesity and metabolic syndrome?", 
+            opts: ["Group 1: Unprocessed foods", "Group 3: Processed foods", "Group 4: Ultra-processed foods", "Group 2: Culinary ingredients"], 
+            ans: "Group 4: Ultra-processed foods",
+            note: "Reference: NOVA classification. Group 4 consists of industrial formulations often containing cosmetic additives and very little whole food."
+        },
+        { 
+            q: "As per ICMR-NIN 2024 Guidelines, what is the recommendation regarding protein powders for the general adult population?", 
+            opts: ["Safe up to 2.0g/kg/day", "Recommended to meet RDA", "Avoided; associated with renal/bone issues", "Recommended only for vegetarians"], 
+            ans: "Avoided; associated with renal/bone issues",
+            note: "Reference: NIN 2024. The guidelines emphasize a 'food first' approach and warn against potential risks of concentrated protein supplements."
+        },
+        { 
+            q: "Which study design is most prone to 'Reverse Causality' when assessing diet and chronic disease?", 
+            opts: ["Prospective Cohort Study", "Cross-sectional Study", "Randomized Controlled Trial", "Ecological Study"], 
+            ans: "Cross-sectional Study",
+            note: "Explanation: Because exposure and outcome are measured simultaneously in cross-sectional studies, it is difficult to determine temporal sequence."
+        },
+        { 
+            q: "Which fatty acid profile change is most effective in reducing LDL cholesterol?", 
+            opts: ["Increasing MCTs", "Replacing SFA with PUFA", "Replacing SFA with Carbohydrates", "Replacing Trans fats with SFA"], 
+            ans: "Replacing SFA with PUFA",
+            note: "Reference: Lipid-lowering hierarchy. Replacing Saturated Fatty Acids (SFA) with Polyunsaturated Fatty Acids (PUFA) is the most potent strategy."
+        },
+        { 
+            q: "What is the correct formula for Glycemic Load (GL)?", 
+            opts: ["(Glycemic Index x Carbohydrate (g)) / 100", "Glycemic Index x Dietary Fiber", "(Carbohydrate / GI) x 100", "(GI x Total Food Weight) / 100"], 
+            ans: "(Glycemic Index x Carbohydrate (g)) / 100",
+            note: "Explanation: GL accounts for both the quality (GI) and quantity (carbohydrate amount) of food consumed."
+        },
+        { 
+            q: "What is the primary characteristic of the protein source in the EAT-Lancet 'Planetary Health Diet'?", 
+            opts: ["Exclusive veganism", "High reliance on dairy/eggs", "Predominantly plant-based proteins", "Processed soy isolates"], 
+            ans: "Predominantly plant-based proteins",
+            note: "Reference: EAT-Lancet Commission. The diet is 'flexitarian,' emphasizing plants while allowing modest amounts of meat and dairy."
+        },
+        { 
+            q: "Which anthropometric indicator is suggested by the Ashwell Shape Chart?", 
+            opts: ["Waist-to-Hip Ratio (WHR)", "Mid-Upper Arm Circumference (MUAC)", "Body Mass Index (BMI)", "Waist-to-Height Ratio (WHtR)"], 
+            ans: "Waist-to-Height Ratio (WHtR)",
+            note: "Explanation: The Ashwell Shape Chart uses WHtR. The simple screening rule is 'Keep your waist circumference to less than half your height.'"
+        },
+        { 
+            q: "What is the NIN recommended daily dietary fiber intake for an adult man?", 
+            opts: ["50-60 g/day", "10 g/day", "25-30 g/day", "15-20 g/day"], 
+            ans: "25-30 g/day",
+            note: "Reference: NIN 2020/2024. A intake of 25-30g/day is associated with reduced risk of coronary heart disease and other metabolic conditions."
+        },
+        { 
+            q: "Which FOPL system uses a graded summary indicator (colors and letters) to rank nutritional quality?", 
+            opts: ["Multiple Traffic Light", "Nutri-Score", "GDA", "Warning Labels"], 
+            ans: "Nutri-Score",
+            note: "Explanation: Nutri-Score grades foods from 'A' (Green/Healthy) to 'E' (Red/Less Healthy)."
+        },
+        { 
+            q: "Deficiency of which triad of vitamins is primarily responsible for hyperhomocysteinemia?", 
+            opts: ["Folic Acid, Vitamin B12, Vitamin B6", "Vitamin A, Vitamin D, Vitamin E", "Thiamine, Riboflavin, Niacin", "Vitamin C, Vitamin E, Selenium"], 
+            ans: "Folic Acid, Vitamin B12, Vitamin B6",
+            note: "Explanation: These B-vitamins are essential co-factors in homocysteine metabolism (One-carbon metabolism)."
+        },
+        { 
+            q: "Besides reducing Sodium, which minerals are increased in the DASH diet?", 
+            opts: ["Potassium, Magnesium, Calcium", "Phosphorus, Sulfur, Chloride", "Selenium, Iodine, Chromium", "Iron, Zinc, Copper"], 
+            ans: "Potassium, Magnesium, Calcium",
+            note: "Reference: DASH Diet. These minerals help lower blood pressure and are abundant in fruits, vegetables, and dairy."
+        },
+        { 
+            q: "Which method is the standard for assessing 'Long-term/Habitual' dietary intake in epidemiology?", 
+            opts: ["Biomarkers", "Weighed Food Record", "Food Frequency Questionnaire (FFQ)", "24-Hour Recall"], 
+            ans: "Food Frequency Questionnaire (FFQ)",
+            note: "Explanation: FFQs are specifically designed to capture habitual intake over months or years."
+        },
+        { 
+            q: "What is the WHO 'REPLACE' target limit for industrially-produced Trans-Fatty Acids (iTFA)?", 
+            opts: ["Less than 5% of total fat", "Less than 10% of total energy", "Zero detection", "Less than 2 g per 100 g of total fat"], 
+            ans: "Less than 2 g per 100 g of total fat",
+            note: "Reference: WHO REPLACE / FSSAI. This limits iTFA to no more than 2% of total fat content."
+        },
+        { 
+            q: "True for Diabetes in the context of 'iceberg' concept of disease ?", 
+            opts: ["Most cases are Type 1 (Insulin Dependent)","The disease is fatal in 90% of cases", "A large percentage of cases remain undiagnosed or 'hidden' in the community", "Symptoms are severe in the early stages"], 
+            ans: "A large percentage of cases remain undiagnosed or 'hidden' in the community",
+            note: "Explanation: The 'submerged' portion of the iceberg represents the large number of undiagnosed cases in the population."
+        },
+        { 
+            q: "Epidemic dropsy is caused by the contamination of Mustard oil with which of the following?", 
+            opts: [ "Argemone oil","BOAA", "Aflatoxins", "Ergot"], 
+            ans: "Argemone oil",
+            note: "Explanation: Sanguinarine is the toxic alkaloid in Argemone oil that causes the symptoms of dropsy."
+        },
+        { 
+            q: "In the context of Vitamin A deficiency, which of the following prevalence criteria in children (6 months to 6 years) indicates a public health problem?", 
+            opts: [ "Night blindness > 5%", "Bitot's spots > 0.5%", "Corneal xerosis > 0.1%", "Serum retinol (< 10 mcg/dl) > 10%"], 
+            ans: "Bitot's spots > 0.5%",
+            note: "Reference: WHO. Prevalence of Bitot's spots > 0.5% in under-6 children indicates a public health problem."
+        },
+        { 
+            q: "In the epidemiology of hypertension, the 'Rule of Halves' suggests that:", 
+            opts: [ "Half the population has normal blood pressure", "Half of the hypertensive subjects are aware of the condition", "Half of the complications are due to stroke", "Half of the risk factors are modifiable"], 
+            ans: "Half of the hypertensive subjects are aware of the condition",
+            note: "Explanation: The rule states: Half of hypertensives are known, half of known are treated, and half of treated are controlled."
+        },
+        { 
+            q: "According to the classification of malnutrition, Severe Acute Malnutrition (SAM) in children is defined by a Mid-Upper Arm Circumference (MUAC) of:", 
+            opts: [ "< 13.5 cm", "< 12.5 cm", "< 11.5 cm", "< 10.0 cm"], 
+            ans: "< 11.5 cm",
+            note: "Reference: WHO. A MUAC less than 115 mm (11.5 cm) is an independent diagnostic criterion for SAM."
+        }
+    ];
+
+    let questions = [];
+    let startTime;
+    let timerInt;
+    let currentQuestionIndex = 0; 
+    let currentScore = 0;         
+    let finalAnswers = [];        
+
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    function formatTime(totalSeconds) {
+        const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+        const s = (totalSeconds % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+    }
+
+    function startQuiz() {
+        document.getElementById('screen-welcome').classList.add('hidden');
+        document.getElementById('screen-quiz').classList.remove('hidden');
+
+        questions = shuffle([...db]);
+        startTime = new Date(); // TIMER STARTS HERE
+        
+        timerInt = setInterval(() => {
+            let elapsed = Math.floor((new Date() - startTime)/1000);
+            let remaining = TIME_LIMIT_SECONDS - elapsed;
+            if (remaining <= 0) {
+                clearInterval(timerInt);
+                document.getElementById('timer').innerText = "00:00";
+                alert("Time is up!");
+                submitFinalData(); 
+            } else {
+                document.getElementById('timer').innerText = formatTime(remaining);
+                if(remaining < 60) document.getElementById('timer').style.color = "red";
+            }
+        }, 1000);
+        renderQuestion(0);
+    }
+
+    function renderQuestion(index) {
+        const container = document.getElementById('single-question-container');
+        const item = questions[index];
+        let opts = shuffle([...item.opts]);
+
+        let html = `
+            <div class="question-card">
+                <div class="question-text">Q${index+1}. ${item.q}</div>
+                <div class="options">
+                    ${opts.map(o => `<label><input type="radio" name="currentQ" value="${o}"> ${o}</label>`).join('')}
+                </div>
+            </div>`;
+        container.innerHTML = html;
+        document.getElementById('progress-indicator').innerText = `Question ${index+1} of 20`;
+        const btn = document.getElementById('nextBtn');
+        if (index === 19) { btn.innerText = "Finish & Submit"; btn.style.backgroundColor = "#28a745"; } 
+        else { btn.innerText = "Next Question"; btn.style.backgroundColor = "#0066cc"; }
+    }
+
+    function handleNextButton() {
+        const selectedOption = document.querySelector('input[name="currentQ"]:checked');
+        if (!selectedOption) { alert("Please select an option."); return; }
+
+        const val = selectedOption.value;
+        const currentQObj = questions[currentQuestionIndex];
+        if (val === currentQObj.ans) currentScore++;
+        
+        finalAnswers.push({ q: currentQObj.q, yourAns: val, correct: currentQObj.ans });
+
+        if (currentQuestionIndex < 19) {
+            currentQuestionIndex++;
+            renderQuestion(currentQuestionIndex);
+            window.scrollTo(0,0);
+        } else {
+            submitFinalData();
+        }
+    }
+
+    function submitFinalData() {
+        clearInterval(timerInt);
+        const endTime = new Date();
+        const timeTaken = Math.floor((endTime - startTime)/1000);
+
+        document.getElementById('final-score').innerText = `Your Score: ${currentScore} / 20`;
+        const reportContainer = document.getElementById('result-breakdown');
+        reportContainer.innerHTML = ''; 
+
+        finalAnswers.forEach((answerObj, idx) => {
+            const dbRef = db.find(item => item.q === answerObj.q);
+            const isCorrect = (answerObj.yourAns === answerObj.correct);
+            const statusClass = isCorrect ? 'res-correct' : 'res-wrong';
+            const statusIcon = isCorrect ? '✔' : '✖';
+
+            let html = `
+                <div class="result-card ${statusClass}">
+                    <div style="font-weight:bold; margin-bottom:8px;">Q${idx+1}. ${answerObj.q}</div>
+                    <div>Your Answer: <strong>${answerObj.yourAns}</strong> <span style="float:right;">${statusIcon}</span></div>
+                    ${!isCorrect ? `<div style="color:#a00;">Correct Answer: <strong>${answerObj.correct}</strong></div>` : ''}
+                    <div class="res-explanation"><strong>Note:</strong> ${dbRef.note}</div>
+                </div>`;
+            reportContainer.insertAdjacentHTML('beforeend', html);
+        });
+
+        // Submit Type: 'submit'
+        const payload = {
+            type: 'submit',
+            ip: userIP,
+            location: userLocation,
+            score: currentScore,
+            timeTaken: timeTaken
+        };
+        
+        fetch(SCRIPT_URL, {
+            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).catch(e => console.log("Submit error"));
+
+        document.getElementById('screen-quiz').classList.add('hidden');
+        document.getElementById('screen-result').classList.remove('hidden');
+        window.scrollTo(0,0);
+    }
+
+    function trackAndPrint() {
+        // Submit Type: 'download'
+        const payload = {
+            type: 'download',
+            ip: userIP,
+            location: userLocation
+        };
+
+        fetch(SCRIPT_URL, {
+            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(() => {
+            window.print();
+        }).catch(e => {
+            window.print(); // Print even if tracking fails
+        });
+    }
+</script>
+
+</body>
+</html>
